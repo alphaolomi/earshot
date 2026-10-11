@@ -69,17 +69,10 @@ export async function loadGuide(narrator, onProgress) {
   }
 }
 
-async function ask(prompt, maxTokens, examples = [], temperature = 0.6) {
+async function ask(prompt, maxTokens, temperature = 0.6) {
   // Gemma's chat template has no system role, so instructions go in the user turn.
-  // Worked examples are passed as earlier turns: a 1B model copies inline examples verbatim.
   const reply = await engine.chat.completions.create({
-    messages: [
-      ...examples.flatMap(([q, a]) => [
-        { role: "user", content: q },
-        { role: "assistant", content: a },
-      ]),
-      { role: "user", content: prompt },
-    ],
+    messages: [{ role: "user", content: prompt }],
     temperature,
     top_p: 0.9,
     frequency_penalty: 0.4,
@@ -88,29 +81,19 @@ async function ask(prompt, maxTokens, examples = [], temperature = 0.6) {
   return clean(reply.choices[0].message.content);
 }
 
-const NARRATE_RULES =
-  "You are a walking guide speaking into someone's earbuds. Reply with only the spoken words: 2 or 3 sentences, under 60 words. Use only the facts given, never invent dates or people. End by asking the listener to look at, touch or listen to something real.";
-
-const NARRATE_EXAMPLES = [
-  [
-    `${NARRATE_RULES}
-
-Place: Old Clock Tower (historic tower)
-Facts: Dates from: 1898; Material: coral stone`,
-    "This coral stone clock tower has stood here since 1898. Look up and find the clock face, then stand still for a moment. Can you hear it ticking?",
-  ],
-];
-
+// Prompts stay short on purpose: Gemma 3 1B attends over a 512-token sliding window, and
+// long prompts (rules + worked examples + facts) made it lose the plot and invent things.
 export async function narrate(place, area) {
-  const facts = place.facts.length ? place.facts.join("; ") : "none recorded";
-  const prompt = `${NARRATE_RULES}
+  const facts = place.facts.join(" ").slice(0, 600);
+  const prompt = facts
+    ? `Rewrite these facts as 2 short spoken sentences for someone standing in front of ${place.name} in ${area}. Then add one sentence asking them to look closely at, touch, or listen for one specific thing there.
 
-Place: ${place.name} (${place.kind}), in ${area}
-Facts: ${facts}`;
+Facts: ${facts}`
+    : `Someone is standing in front of ${place.name}, a ${place.kind} in ${area}. You know nothing else about it, so state no facts. In 2 short spoken sentences, tell them what to look for and ask them to touch or listen to something.`;
   // Grounding check: every number Gemma says (years, heights, counts) must appear in the facts.
   // One stricter retry, then fall back to reading the facts plainly rather than risk inventing history.
-  for (const temperature of [0.6, 0.2]) {
-    const text = await ask(prompt, 120, NARRATE_EXAMPLES, temperature);
+  for (const temperature of [0.5, 0.2]) {
+    const text = await ask(prompt, 110, temperature);
     if (text.split(" ").length >= 8 && grounded(text, facts + " " + place.name)) return text;
   }
   return fallbackNarration(place);
@@ -137,7 +120,8 @@ export async function ambientPrompts(area, timeOfDay) {
     lines.push(
       await ask(
         `You are Earshot, a calm walking guide speaking into earbuds. Someone is walking through ${area} in the ${timeOfDay}, between landmarks. Write ONE short spoken sentence, under 25 words, inviting them to notice ${theme}. No emoji, no markdown, no quotes.`,
-        50
+        50,
+        0.7
       )
     );
   }
@@ -171,11 +155,16 @@ function clean(text) {
     .replace(/\s+/g, " ")
     .replace(/^(okay|ok|sure)[,.!]\s*/i, "")
     .replace(/^here(’|')?s[^:]*:\s*/i, "")
-    .replace(/^["'“”‘’\s]+|["'“”‘’\s]+$/g, "")
+    .replace(/^here (are|is)[^:]*:\s*/i, "")
+    .replace(/["“”]/g, "")
+    .replace(/(^|[.!?]\s+)Then,\s*(\w)/g, (_, pre, c) => pre + c.toUpperCase())
+    .replace(/^['‘’\s]+|['‘’\s]+$/g, "")
     .trim();
   // Small models sometimes ramble. Keep it to three sentences, but keep the last one:
   // that's where the "look up / touch / listen" invitation lives.
-  const sentences = (flat.match(/[^.!?]+[.!?]+/g) || [flat]).map((x) => x.trim());
+  const sentences = (flat.match(/[^.!?]+[.!?]+/g) || [flat])
+    .map((x) => x.trim())
+    .filter((x) => !/let me know|i hope|feel free|would you like me|here (are|is) (two|2|a|some)/i.test(x));
   const kept = sentences.length > 3 ? [...sentences.slice(0, 2), sentences.at(-1)] : sentences;
   return kept.join(" ");
 }

@@ -22,10 +22,12 @@ The screen is the shortest part of the walk.
                      "walk pack" saved in localStorage ──► works with no signal
 ```
 
-- **Model:** [`gemma3-1b-it-q4f16_1-MLC`](https://huggingface.co/mlc-ai/gemma3-1b-it-q4f16_1-MLC) via [WebLLM](https://github.com/mlc-ai/web-llm). Falls back to Gemma 2 2B (f32) on GPUs without `shader-f16`, and to plain facts if there's no WebGPU at all.
-- **Grounding:** the prompt passes only OSM tags and the Wikipedia intro, and tells Gemma to describe what to look at rather than invent history when facts are thin. Every narration ends with a small physical action: look up, touch, listen.
+- **Models (swappable):** [Gemma 2 2B Instruct](https://huggingface.co/mlc-ai/gemma-2-2b-it-q4f16_1-MLC) by default, or [Gemma 3 1B Instruct](https://huggingface.co/mlc-ai/gemma3-1b-it-q4f16_1-MLC) as a lite option, both via [WebLLM](https://github.com/mlc-ai/web-llm) on WebGPU. f32 builds are used on GPUs without `shader-f16`. With no WebGPU at all, Earshot reads the facts plainly.
+- **Grounding:** Gemma is asked to *rewrite* the OSM tags and Wikipedia intro, not to recall anything. Any number it says (years, heights) must appear in the source text. Otherwise it retries at low temperature, then falls back to the plain facts. Places with no facts get a "tell them what to look at" prompt instead. Every narration ends with a small physical action: look, touch, listen.
+- **Short prompts on purpose:** Gemma 3 1B attends over a 512-token sliding window. Long prompts with rules and worked examples made it invent things ("the museum of the Great Pyramid"). Short "rewrite these facts" prompts fixed it.
 - **Privacy:** the live GPS trace never leaves the device. While planning, only a coarse (~100 m) point is sent to OpenStreetMap and Wikipedia.
-- **Offline:** narration is generated at planning time, so the walk needs no network and no model. A service worker caches the app shell. Gemma's weights are cached by WebLLM after the first download (~700 MB).
+- **Offline:** narration is generated at planning time, so the walk needs no network and no model. A service worker caches the app shell. Gemma's weights are cached by WebLLM after the first download (1.5 GB or 540 MB), falling back from Cache Storage to IndexedDB if the browser refuses large entries.
+- **Resilient data:** public Overpass servers are flaky, so several mirrors are queried in parallel alongside Wikipedia's geosearch. Places mapped twice under slightly different names are merged, and OSM→Wikipedia links pointing more than 2 km away are ignored.
 - **Pocket mode:** mobile browsers pause GPS when the screen sleeps, so Earshot holds a Wake Lock and shows an all-black screen (cheap on OLED, invisible in a pocket).
 
 ## Run it
