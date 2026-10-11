@@ -3,12 +3,12 @@
 // Swappable open-weight narrators. f16 builds need WebGPU's shader-f16 feature; f32 is the fallback.
 export const NARRATORS = {
   gemma2: {
-    label: "Gemma 2 2B (best, 1.5 GB download)",
+    label: "Gemma 2 2B · best · 1.5 GB",
     f16: "gemma-2-2b-it-q4f16_1-MLC",
     f32: "gemma-2-2b-it-q4f32_1-MLC",
   },
   gemma3: {
-    label: "Gemma 3 1B (lite, 540 MB, for older phones)",
+    label: "Gemma 3 1B · lite · 540 MB",
     f16: "gemma3-1b-it-q4f16_1-MLC",
     f32: "gemma-2-2b-it-q4f32_1-MLC",
     // WebLLM's Gemma 3 record sets a 4096 context while the weights declare a 512 sliding
@@ -47,7 +47,7 @@ export async function loadGuide(narrator, onProgress) {
         worker,
         modelId,
         {
-          appConfig: { ...prebuiltAppConfig, useIndexedDBCache },
+          appConfig: { ...prebuiltAppConfig, cacheBackend: useIndexedDBCache ? "indexeddb" : "cache" },
           initProgressCallback: (p) => onProgress?.(p.progress, p.text),
         },
         modelId === choice.f16 ? choice.chatOpts : undefined
@@ -69,7 +69,7 @@ export async function loadGuide(narrator, onProgress) {
   }
 }
 
-async function ask(prompt, maxTokens, examples = []) {
+async function ask(prompt, maxTokens, examples = [], temperature = 0.6) {
   // Gemma's chat template has no system role, so instructions go in the user turn.
   // Worked examples are passed as earlier turns: a 1B model copies inline examples verbatim.
   const reply = await engine.chat.completions.create({
@@ -80,7 +80,7 @@ async function ask(prompt, maxTokens, examples = []) {
       ]),
       { role: "user", content: prompt },
     ],
-    temperature: 0.6,
+    temperature,
     top_p: 0.9,
     frequency_penalty: 0.4,
     max_tokens: maxTokens,
@@ -101,16 +101,24 @@ Facts: Dates from: 1898; Material: coral stone`,
   ],
 ];
 
-export function narrate(place, area) {
+export async function narrate(place, area) {
   const facts = place.facts.length ? place.facts.join("; ") : "none recorded";
-  return ask(
-    `${NARRATE_RULES}
+  const prompt = `${NARRATE_RULES}
 
 Place: ${place.name} (${place.kind}), in ${area}
-Facts: ${facts}`,
-    120,
-    NARRATE_EXAMPLES
-  );
+Facts: ${facts}`;
+  // Grounding check: every number Gemma says (years, heights, counts) must appear in the facts.
+  // One stricter retry, then fall back to reading the facts plainly rather than risk inventing history.
+  for (const temperature of [0.6, 0.2]) {
+    const text = await ask(prompt, 120, NARRATE_EXAMPLES, temperature);
+    if (text.split(" ").length >= 8 && grounded(text, facts + " " + place.name)) return text;
+  }
+  return fallbackNarration(place);
+}
+
+export function grounded(text, source) {
+  const numbers = text.match(/\d[\d,.]*/g) || [];
+  return numbers.every((n) => source.includes(n.replace(/[.,]$/, "")));
 }
 
 const THEMES = [
@@ -152,7 +160,8 @@ export function fallbackNarration(place) {
     ? (wiki.slice(11).match(/[^.!?]+[.!?]+/g) || []).slice(0, 2).join(" ").trim()
     : place.facts.slice(0, 2).join(". ");
   const article = /^[aeiou]/i.test(place.kind) ? "an" : "a";
-  return `This is ${place.name}. ${about || `It's ${article} ${place.kind}.`} Take a second to look at it properly.`;
+  // The walk already announces the name ("On your left: Old Fort."), so start with the facts.
+  return `${about || `It's ${article} ${place.kind}.`} Take a second to look at it properly.`;
 }
 
 function clean(text) {

@@ -83,8 +83,15 @@ async function plan(getPoint) {
     let ambient = DEFAULT_AMBIENT;
     let model = null;
     setStep("model", "active");
+    // Big shards can sit at the same percentage for minutes on slow or nearly-full devices.
+    let lastProgress = Date.now();
+    const stallHint = setInterval(() => {
+      if (Date.now() - lastProgress > 90000 && $("#narrator").value !== "gemma3")
+        setStep("model", "active", "Still downloading a large piece… On a slow connection or a nearly full phone, the Gemma 3 1B lite narrator is quicker.");
+    }, 5000);
     try {
       await loadGuide($("#narrator").value, (progress, text) => {
+        lastProgress = Date.now();
         $("#model-bar").value = progress;
         setStep("model", "active", text.replace(/\[.*?\]\s*/, "").slice(0, 90));
       });
@@ -92,6 +99,8 @@ async function plan(getPoint) {
       setStep("model", "done", `${modelId} running on your GPU`);
     } catch (e) {
       setStep("model", "failed", `${e.message} Using plain facts instead.`);
+    } finally {
+      clearInterval(stallHint);
     }
 
     setStep("write", "active");

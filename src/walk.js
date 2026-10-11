@@ -129,7 +129,7 @@ export class Walk {
     try {
       this.wakeLock = await navigator.wakeLock?.request("screen");
     } catch {
-      this.update({ error: "Couldn't keep the screen awake. Turn off auto-lock for this walk." });
+      if (!this.demo) this.update({ error: "Couldn't keep the screen awake. Turn off auto-lock for this walk." });
     }
   }
 

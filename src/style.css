@@ -45,6 +45,8 @@ h2 small { display: inline; font-weight: 400; margin-left: 0.35rem; }
 }
 .row { display: flex; gap: 0.5rem; align-items: center; }
 .radius { justify-content: space-between; color: var(--muted); }
+.card > * { min-width: 0; } /* let long option labels shrink instead of widening the card */
+.radius select { flex: 0 1 auto; min-width: 0; max-width: 65%; text-overflow: ellipsis; }
 
 button, input, select {
   font: inherit;
@@ -113,4 +115,3 @@ progress { width: 100%; accent-color: var(--accent); margin-top: 0.4rem; }
 
 @keyframes breathe { 50% { transform: scale(1.6); opacity: 0.2; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
-.radius select { max-width: 62%; }
