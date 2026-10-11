@@ -8,18 +8,30 @@ The screen is the shortest part of the walk.
 
 ## How it works
 
-```
- plan (online, ~1 min)                         walk (offline, phone in pocket)
- ─────────────────────                         ───────────────────────────────
- OpenStreetMap (Overpass) ─┐                   GPS ──► nearest unheard place within ~35 m?
- Wikipedia geosearch ──────┼─► places + facts            │
-                           │        │                    ▼
-                           │        ▼           Web Speech API reads the narration
-                           │  Gemma 2 2B / 3 1B (WebLLM, WebGPU, Web Worker)
-                           │  writes 2-3 grounded sentences per place
-                           │        │
-                           └────────▼
-                     "walk pack" saved in localStorage ──► works with no signal
+```mermaid
+flowchart LR
+  subgraph PLAN["PLAN · online, about a minute"]
+    direction TB
+    OSM["OpenStreetMap<br/>(Overpass mirrors)"] --> P["Places + facts"]
+    WIKI["Wikipedia<br/>geosearch"] --> P
+    P --> G["<b>Wren</b> = Gemma, on the phone<br/>via WebLLM + WebGPU<br/>rewrites the facts into<br/>2–3 spoken sentences"]
+    G --> CHECK{"Every number<br/>found in the facts?"}
+    CHECK -- yes --> PACK[("Walk pack<br/>saved on the phone")]
+    CHECK -- no --> FB["Retry once,<br/>else read plain facts"]
+    FB --> PACK
+  end
+  subgraph WALK["WALK · offline, phone in pocket"]
+    direction TB
+    GPS["GPS position"] --> NEAR{"Unheard place<br/>within ~35 m?"}
+    NEAR -- yes --> SPEAK["Web Speech API<br/>reads the narration aloud"]
+    NEAR -- "no, quiet 3 min" --> AMB["Wren nudges:<br/>notice a sound, a colour…"]
+  end
+  PACK == "no signal needed" ==> NEAR
+
+  classDef wren fill:#b8e07a,stroke:#3d5a2a,stroke-width:2px,color:#13200f
+  classDef store fill:#13200f,stroke:#13200f,color:#edf2ea
+  class G,AMB wren
+  class PACK store
 ```
 
 - **Wren, the persona:** the app never shows model names. People meet Wren, a friendly companion who introduces itself, narrates each stop, and nudges you to notice things between stops. Settings offer "Full" or "Light" storytelling instead of model IDs.

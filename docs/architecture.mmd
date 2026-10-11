@@ -1,0 +1,24 @@
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#eef7e1", "primaryBorderColor": "#5b7d3a", "primaryTextColor": "#16241c", "lineColor": "#3d5a2a", "clusterBkg": "#f7faf3", "clusterBorder": "#b8e07a", "edgeLabelBackground": "#ffffff"}}}%%
+flowchart LR
+  subgraph PLAN["PLAN · online, about a minute"]
+    direction TB
+    OSM["OpenStreetMap<br/>(Overpass mirrors)"] --> P["Places + facts"]
+    WIKI["Wikipedia<br/>geosearch"] --> P
+    P --> G["<b>Wren</b> = Gemma, on the phone<br/>via WebLLM + WebGPU<br/>rewrites the facts into<br/>2–3 spoken sentences"]
+    G --> CHECK{"Every number<br/>found in the facts?"}
+    CHECK -- yes --> PACK[("Walk pack<br/>saved on the phone")]
+    CHECK -- no --> FB["Retry once,<br/>else read plain facts"]
+    FB --> PACK
+  end
+  subgraph WALK["WALK · offline, phone in pocket"]
+    direction TB
+    GPS["GPS position"] --> NEAR{"Unheard place<br/>within ~35 m?"}
+    NEAR -- yes --> SPEAK["Web Speech API<br/>reads the narration aloud"]
+    NEAR -- "no, quiet 3 min" --> AMB["Wren nudges:<br/>notice a sound, a colour…"]
+  end
+  PACK == "no signal needed" ==> NEAR
+
+  classDef wren fill:#b8e07a,stroke:#3d5a2a,stroke-width:2px,color:#13200f
+  classDef store fill:#13200f,stroke:#13200f,color:#edf2ea
+  class G,AMB wren
+  class PACK store
