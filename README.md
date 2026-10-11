@@ -15,7 +15,7 @@ The screen is the shortest part of the walk.
  Wikipedia geosearch ──────┼─► places + facts            │
                            │        │                    ▼
                            │        ▼           Web Speech API reads the narration
-                           │  Gemma 3 1B (WebLLM, WebGPU, in a Web Worker)
+                           │  Gemma 2 2B / 3 1B (WebLLM, WebGPU, Web Worker)
                            │  writes 2-3 grounded sentences per place
                            │        │
                            └────────▼

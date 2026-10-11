@@ -86,10 +86,10 @@ async function ask(prompt, maxTokens, temperature = 0.6) {
 export async function narrate(place, area) {
   const facts = place.facts.join(" ").slice(0, 600);
   const prompt = facts
-    ? `Rewrite these facts as 2 short spoken sentences for someone standing in front of ${place.name} in ${area}. Then add one sentence asking them to look closely at, touch, or listen for one specific thing there.
+    ? `Rewrite these facts as 2 short spoken sentences for someone standing in front of ${place.name} in ${area}. Then add one sentence that starts with Look, Touch, or Listen and names a real detail of this place.
 
 Facts: ${facts}`
-    : `Someone is standing in front of ${place.name}, a ${place.kind} in ${area}. You know nothing else about it, so state no facts. In 2 short spoken sentences, tell them what to look for and ask them to touch or listen to something.`;
+    : `Someone is standing in front of ${place.name}, a ${place.kind} in ${area}. You know nothing else about it, so state no facts. In 2 short spoken sentences, tell them what to look for. Start the last sentence with Look, Touch, or Listen.`;
   // Grounding check: every number Gemma says (years, heights, counts) must appear in the facts.
   // One stricter retry, then fall back to reading the facts plainly rather than risk inventing history.
   for (const temperature of [0.5, 0.2]) {
@@ -153,7 +153,8 @@ function clean(text) {
     .replace(/[*_#`>]/g, "")
     .replace(/^\s*[-•]\s*/gm, "")
     .replace(/\s+/g, " ")
-    .replace(/^(okay|ok|sure)[,.!]\s*/i, "")
+    .replace(/-{2,}|additional sentence:?|sentence \d:?/gi, " ")
+    .replace(/^(okay|ok|sure|hello( there)?|hi( there)?|hey( there)?)[,.!]\s*/i, "")
     .replace(/^here(’|')?s[^:]*:\s*/i, "")
     .replace(/^here (are|is)[^:]*:\s*/i, "")
     .replace(/["“”]/g, "")
