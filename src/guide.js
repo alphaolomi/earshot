@@ -1,14 +1,17 @@
-// The narrator: Gemma (open weights) running locally in the browser via WebLLM + WebGPU.
+// Wren, the narrator: Gemma (open weights) running locally in the browser via WebLLM + WebGPU.
+// The UI never names the model; people meet "Wren", not a model ID.
 
 // Swappable open-weight narrators. f16 builds need WebGPU's shader-f16 feature; f32 is the fallback.
 export const NARRATORS = {
-  gemma2: {
-    label: "Gemma 2 2B · best · 1.5 GB",
+  full: {
+    label: "Full · best stories · 1.5 GB",
+    size: "1.5 GB",
     f16: "gemma-2-2b-it-q4f16_1-MLC",
     f32: "gemma-2-2b-it-q4f32_1-MLC",
   },
-  gemma3: {
-    label: "Gemma 3 1B · lite · 540 MB",
+  light: {
+    label: "Light · older phones · 540 MB",
+    size: "540 MB",
     f16: "gemma3-1b-it-q4f16_1-MLC",
     f32: "gemma-2-2b-it-q4f32_1-MLC",
     // WebLLM's Gemma 3 record sets a 4096 context while the weights declare a 512 sliding
@@ -21,14 +24,14 @@ let engine = null;
 export let modelId = null;
 
 export async function webgpuStatus() {
-  if (!("gpu" in navigator)) return { ok: false, reason: "This browser has no WebGPU. Try Chrome or Edge on desktop, or Chrome on Android 12+." };
+  if (!("gpu" in navigator)) return { ok: false, reason: "no WebGPU" };
   const adapter = await navigator.gpu.requestAdapter().catch(() => null);
-  if (!adapter) return { ok: false, reason: "WebGPU is present but no GPU adapter was found." };
+  if (!adapter) return { ok: false, reason: "no GPU adapter" };
   return { ok: true, f16: adapter.features.has("shader-f16") };
 }
 
 export async function loadGuide(narrator, onProgress) {
-  const choice = NARRATORS[narrator] || NARRATORS.gemma2;
+  const choice = NARRATORS[narrator] || NARRATORS.full;
   const gpu = await webgpuStatus();
   if (!gpu.ok) throw new Error(gpu.reason);
   const wanted = gpu.f16 ? choice.f16 : choice.f32;
@@ -62,8 +65,8 @@ export async function loadGuide(narrator, onProgress) {
         localStorage.setItem("earshot:idb", "1");
       }
       const network = /fetch|network|cors|load|cache/i.test(message);
-      if (attempt === 3 || !network) throw new Error(`Couldn't load Gemma (${e?.message || e}).`);
-      onProgress?.(0, `Download hiccup, retrying (${attempt} of 2)…`);
+      if (attempt === 3 || !network) throw new Error(`Couldn't load the model (${message}).`);
+      onProgress?.(0, "retry");
       await new Promise((r) => setTimeout(r, 2000 * attempt));
     }
   }
@@ -119,7 +122,7 @@ export async function ambientPrompts(area, timeOfDay) {
   for (const theme of THEMES) {
     lines.push(
       await ask(
-        `You are Earshot, a calm walking guide speaking into earbuds. Someone is walking through ${area} in the ${timeOfDay}, between landmarks. Write ONE short spoken sentence, under 25 words, inviting them to notice ${theme}. No emoji, no markdown, no quotes.`,
+        `You are Wren, a calm, friendly walking companion speaking into earbuds. Someone is walking through ${area} in the ${timeOfDay}, between landmarks. Write ONE short spoken sentence, under 25 words, inviting them to notice ${theme}. No emoji, no markdown, no quotes.`,
         50,
         0.7
       )

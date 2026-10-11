@@ -12,9 +12,9 @@ const MAX_PLACES = 20; // plenty for an hour, and keeps planning quick
 export async function geocode(query) {
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
   const res = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(`Place search failed (${res.status})`);
+  if (!res.ok) throw new Error("I couldn't search for places just now. Check your internet connection and try again.");
   const [hit] = await res.json();
-  if (!hit) throw new Error(`Couldn't find "${query}"`);
+  if (!hit) throw new Error(`I couldn't find "${query}". Try adding the town or city, like "Stone Town, Zanzibar".`);
   return { lat: +hit.lat, lon: +hit.lon, label: hit.display_name.split(",").slice(0, 2).join(",") };
 }
 
@@ -38,7 +38,7 @@ export async function findPlaces(point, radius) {
   const center = coarse(point);
   const [osm, wiki] = await Promise.allSettled([osmPlaces(center, radius), wikiPlaces(center, radius)]);
   if (osm.status === "rejected" && wiki.status === "rejected")
-    throw new Error("Couldn't reach OpenStreetMap or Wikipedia. Check your connection and try again in a minute.");
+    throw new Error("I couldn't reach the map just now. Check your internet connection and try again in a minute.");
 
   // OSM first: its tags are richer, so it wins when both sources know a place.
   const seen = new Set();

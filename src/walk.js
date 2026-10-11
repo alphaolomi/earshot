@@ -30,15 +30,15 @@ export class Walk {
     document.addEventListener("visibilitychange", this.onVisibility);
 
     this.say(
-      `Earshot is on. ${this.pack.places.length} places are waiting around ${this.pack.area}. ` +
-        `Put your phone in your pocket. I'll speak up when you reach something worth noticing.`
+      `Hi, I'm Wren. I've found ${this.pack.places.length} places worth seeing around ${this.pack.area}. ` +
+        `Put your phone in your pocket and start walking. I'll speak up when you reach one.`
     );
 
     if (this.demo) this.startDemo();
     else
       this.watchId = navigator.geolocation.watchPosition(
         (p) => this.onPosition({ lat: p.coords.latitude, lon: p.coords.longitude }, p.coords.heading),
-        (e) => this.update({ error: `Location error: ${e.message}` }),
+        () => this.update({ error: "I can't see where you are. Check that location is turned on and allowed for this site." }),
         { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 }
       );
 
@@ -129,7 +129,7 @@ export class Walk {
     try {
       this.wakeLock = await navigator.wakeLock?.request("screen");
     } catch {
-      if (!this.demo) this.update({ error: "Couldn't keep the screen awake. Turn off auto-lock for this walk." });
+      if (!this.demo) this.update({ error: "Tip: keep your screen on during the walk. Turn off auto-lock in your phone's settings." });
     }
   }
 
@@ -163,7 +163,7 @@ export class Walk {
       this.onPosition(pos, null);
       if (leg >= route.length - 1 && this.heard.size === this.pack.places.length) {
         clearInterval(this.demoTimer);
-        setTimeout(() => this.say("That's every place on this walk. Thanks for looking up."), 1500);
+        setTimeout(() => this.say("That's every stop on this walk. Thanks for walking with me, and for looking up."), 1500);
       }
     }, 1000);
   }

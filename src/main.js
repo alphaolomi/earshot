@@ -5,6 +5,7 @@ import { Walk } from "./walk.js";
 
 const $ = (sel) => document.querySelector(sel);
 const STORE = "earshot:packs";
+const WALK_SPEED = 80; // metres per minute, an unhurried stroll
 
 let walk = null;
 let currentPack = null;
@@ -31,137 +32,172 @@ function renderHome() {
   list.replaceChildren();
   $("#saved-section").hidden = !packs.length;
   for (const pack of packs) {
-    const li = el("li", { class: "saved" }, [
-      el("div", {}, [
-        el("strong", { text: pack.area }),
-        el("small", { text: `${pack.places.length} places · ${new Date(pack.createdAt).toLocaleDateString()}` }),
-      ]),
-      el("div", { class: "row" }, [
-        el("button", { class: "small", text: "Walk", onclick: () => startWalk(pack, false) }),
-        el("button", { class: "small ghost", text: "Simulate", onclick: () => startWalk(pack, true) }),
-        el("button", {
-          class: "small ghost",
-          text: "✕",
-          "aria-label": `Delete ${pack.area}`,
-          onclick: () => {
-            savePacks(loadPacks().filter((p) => p.id !== pack.id));
-            renderHome();
-          },
-        }),
-      ]),
-    ]);
-    list.append(li);
+    list.append(
+      el("li", { class: "saved" }, [
+        el("div", { class: "saved-head" }, [
+          el("div", {}, [
+            el("strong", { text: pack.area }),
+            el("small", { text: `${pack.places.length} stops · planned ${friendlyDate(pack.createdAt)}` }),
+          ]),
+          el("button", {
+            class: "icon",
+            text: "✕",
+            "aria-label": `Delete the walk around ${pack.area}`,
+            onclick: () => {
+              if (!confirm(`Delete your walk around ${pack.area}?`)) return;
+              savePacks(loadPacks().filter((p) => p.id !== pack.id));
+              renderHome();
+            },
+          }),
+        ]),
+        el("div", { class: "saved-actions" }, [
+          el("button", { class: "primary small", text: "Start walk", onclick: () => startWalk(pack, false) }),
+          el("button", { class: "secondary small", text: "Preview", onclick: () => startWalk(pack, true) }),
+        ]),
+      ])
+    );
   }
   show("home");
 }
 
-// ---------- planning: places → Gemma → saved pack ----------
+// ---------- planning: places → Wren writes → saved pack ----------
 
 async function plan(getPoint) {
   show("prepare");
+  $("#prep-title").textContent = "Planning your walk";
   $("#places").replaceChildren();
+  $("#stops-title").hidden = true;
   $("#walk-actions").hidden = true;
   $("#prep-error").hidden = true;
+  for (const li of document.querySelectorAll("#steps li")) setStep(li.dataset.step, "", "");
+  wrenSays("Let me look around…");
   setStep("find", "active");
 
   try {
     const { point, area } = await getPoint();
-    $("#prep-title").textContent = `A walk around ${area}`;
-    const radius = +$("#radius").value;
+    $("#prep-title").textContent = `Your walk around ${area}`;
+    const radius = +document.querySelector('input[name="radius"]:checked').value;
     const places = await findPlaces(point, radius);
-    if (!places.length) throw new Error("Nothing mapped nearby yet. Try a bigger radius or a busier area.");
-    const fromOsm = places.filter((p) => p.source === "osm").length;
-    setStep("find", "done", `${places.length} places within ${radius} m (${fromOsm} from OpenStreetMap, ${places.length - fromOsm} from Wikipedia)`);
+    if (!places.length) throw new Error("I couldn't find anything interesting nearby. Try a longer walk or a busier area.");
+    setStep("find", "done", `${places.length} spots nearby`);
+    wrenSays(`Ooh, I found ${places.length} spots. Let me read up on them.`);
 
-    const cards = new Map(places.map((p) => [p.id, placeCard(p)]));
+    const cards = new Map(places.map((p, i) => [p.id, placeCard(p, i + 1)]));
     $("#places").append(...cards.values());
+    $("#stops-title").hidden = false;
 
     setStep("wiki", "active");
     await Promise.all(places.map(addWikipedia));
-    setStep("wiki", "done", `${places.filter((p) => p.facts.some((f) => f.startsWith("Wikipedia"))).length} with a Wikipedia article`);
+    const withStories = places.filter((p) => p.facts.length).length;
+    setStep("wiki", "done", `Found background on ${withStories} of them`);
 
-    let ambient = DEFAULT_AMBIENT;
-    let model = null;
-    setStep("model", "active");
-    // Big shards can sit at the same percentage for minutes on slow or nearly-full devices.
+    const narrator = $("#narrator").value;
+    const size = (NARRATORS[narrator] || NARRATORS.full).size;
+    let ready = false;
+    setStep("model", "active", "Starting up…");
+    // Big downloads can sit on one percentage for a while on slow or nearly full phones.
     let lastProgress = Date.now();
     const stallHint = setInterval(() => {
-      if (Date.now() - lastProgress > 90000 && $("#narrator").value !== "gemma3")
-        setStep("model", "active", "Still downloading a large piece… On a slow connection or a nearly full phone, the Gemma 3 1B lite narrator is quicker.");
+      if (Date.now() - lastProgress > 90000 && narrator !== "light")
+        setStep("model", "active", "Still downloading… On slow internet, the Light option in Settings is quicker.");
     }, 5000);
     try {
-      await loadGuide($("#narrator").value, (progress, text) => {
+      await loadGuide(narrator, (progress, text) => {
         lastProgress = Date.now();
         $("#model-bar").value = progress;
-        setStep("model", "active", text.replace(/\[.*?\]\s*/, "").slice(0, 90));
+        const pct = Math.round(progress * 100);
+        if (text === "retry") setStep("model", "active", "The connection hiccuped. Trying again…");
+        else if (/from cache/i.test(text)) setStep("model", "active", `Waking up… ${pct}%`);
+        else if (pct >= 100) setStep("model", "active", "Almost ready…");
+        else {
+          setStep("model", "active", `One-time download (${size}) · ${pct}%. Best on Wi-Fi.`);
+          wrenSays("First time we've met! I'm settling into your phone. After this, I'll work without internet.");
+        }
       });
-      model = modelId;
-      setStep("model", "done", `${modelId} running on your GPU`);
+      ready = true;
+      setStep("model", "done", "Ready, and running on this phone");
     } catch (e) {
-      setStep("model", "failed", `${e.message} Using plain facts instead.`);
+      console.warn("Wren couldn't load:", e);
+      setStep("model", "failed", "Wren couldn't start on this device, so you'll hear short facts instead.");
     } finally {
       clearInterval(stallHint);
     }
 
     setStep("write", "active");
+    wrenSays("Now I'm writing what I'll tell you at each stop.");
     const hour = new Date().getHours();
     const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : hour < 20 ? "evening" : "night";
     for (const [i, place] of places.entries()) {
-      setStep("write", "active", `${i + 1} of ${places.length}: ${place.name}`);
-      place.narration = model ? await narrate(place, area) : fallbackNarration(place);
+      setStep("write", "active", `Stop ${i + 1} of ${places.length}: ${place.name}`);
+      place.narration = ready ? await narrate(place, area) : fallbackNarration(place);
       fillCard(cards.get(place.id), place);
     }
-    if (model) {
-      setStep("write", "active", "Between-places prompts");
+    let ambient = DEFAULT_AMBIENT;
+    if (ready) {
+      setStep("write", "active", "A few things to notice between stops");
       ambient = await ambientPrompts(area, timeOfDay);
     }
-    setStep("write", "done", model ? `Written locally by ${model}` : "Plain-fact narration");
+    setStep("write", "done", `${places.length} stops written`);
 
     currentPack = {
       id: `${point.lat.toFixed(3)},${point.lon.toFixed(3)}`,
       area,
       center: point,
       radius,
-      model,
+      model: ready ? modelId : null,
       createdAt: Date.now(),
       places,
       ambient,
     };
     savePack(currentPack);
-    setStep("save", "done", "Saved on this phone. You can walk with no signal.");
+    setStep("save", "done", "You can walk with no signal");
+    wrenSays("All set! Put your earbuds in and let's go.");
     $("#walk-actions").hidden = false;
+    $("#walk-actions").scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (e) {
     $("#prep-error").textContent = e.message;
     $("#prep-error").hidden = false;
+    wrenSays("Hmm, something went wrong. See below.");
     for (const li of document.querySelectorAll("#steps li.active")) li.className = "failed";
   }
+}
+
+function wrenSays(text) {
+  $("#wren-says").textContent = text;
 }
 
 function setStep(id, state, detail) {
   const li = $(`#steps [data-step="${id}"]`);
   li.className = state;
   if (detail !== undefined) li.querySelector("small").textContent = detail;
-  $("#model-bar").hidden = !(id === "model" && state === "active");
+  if (id === "model") $("#model-bar").hidden = state !== "active";
 }
 
-function placeCard(place) {
+function placeCard(place, n) {
   return el("li", { class: "place" }, [
-    el("div", { class: "place-head" }, [
-      el("div", {}, [el("strong", { text: place.name }), el("small", { text: `${place.kind} · ${place.distance} m` })]),
-      el("button", { class: "small ghost play", text: "▶", disabled: true, "aria-label": `Hear ${place.name}` }),
+    el("span", { class: "stop-num", text: String(n) }),
+    el("div", { class: "place-body" }, [
+      el("div", { class: "place-head" }, [
+        el("div", {}, [
+          el("strong", { text: place.name }),
+          el("small", { text: `${capitalize(place.kind)} · ${minutes(place.distance)} min away` }),
+        ]),
+        el("button", { class: "icon play", text: "▶", disabled: true, "aria-label": `Hear what Wren says about ${place.name}` }),
+      ]),
+      el("p", { class: "narration waiting", text: "Wren is thinking…" }),
     ]),
-    el("p", { class: "narration muted", text: "Waiting for the narrator…" }),
   ]);
 }
 
 function fillCard(card, place) {
-  card.querySelector(".narration").textContent = place.narration;
-  card.querySelector(".narration").classList.remove("muted");
+  const p = card.querySelector(".narration");
+  p.textContent = place.narration;
+  p.classList.remove("waiting");
   const btn = card.querySelector(".play");
   btn.disabled = false;
   btn.onclick = () => {
     speechSynthesis.cancel();
-    speechSynthesis.speak(new SpeechSynthesisUtterance(place.narration));
+    speechSynthesis.speak(new SpeechSynthesisUtterance(`${place.name}. ${place.narration}`));
   };
 }
 
@@ -171,15 +207,18 @@ function startWalk(pack, demo) {
   show("walking");
   $("#walk-area").textContent = pack.area;
   $("#demo-badge").hidden = !demo;
+  $("#walk-error").textContent = "";
   walk = new Walk(pack, { demo, onUpdate: renderWalk });
   walk.start();
 }
 
 function renderWalk(s) {
-  $("#walk-count").textContent = `${s.heard} of ${s.total} places heard`;
-  $("#walk-next").textContent = s.nearest ? `Nearest: ${s.nearest.name} · ${s.nearest.distance} m` : "Waiting for GPS…";
+  $("#walk-count").textContent = `${s.heard} of ${s.total} stops so far`;
+  $("#walk-next").textContent = s.nearest
+    ? `Next up: ${s.nearest.name}, about ${minutes(s.nearest.distance)} min away`
+    : "Finding where you are…";
   $("#walk-text").textContent = s.text || "";
-  $("#walk-state").textContent = s.speaking ? "Speaking" : "Listening";
+  $("#walk-state").textContent = s.speaking ? "Wren is talking" : "Wren is listening";
   $("#walking").classList.toggle("speaking", s.speaking);
   if (s.error) $("#walk-error").textContent = s.error;
 }
@@ -204,6 +243,16 @@ function el(tag, attrs = {}, children = []) {
   return node;
 }
 
+const minutes = (metres) => Math.max(1, Math.round(metres / WALK_SPEED));
+const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function friendlyDate(ts) {
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  if (days < 1) return "today";
+  if (days < 2) return "yesterday";
+  return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
 const here = () =>
   new Promise((resolve, reject) =>
     navigator.geolocation.getCurrentPosition(
@@ -211,7 +260,7 @@ const here = () =>
         const point = { lat: p.coords.latitude, lon: p.coords.longitude };
         resolve({ point, area: await reverseGeocode(point) });
       },
-      (e) => reject(new Error(`Couldn't get your location: ${e.message}`)),
+      () => reject(new Error("I couldn't see where you are. Allow location access when your browser asks, or search for a place instead.")),
       { enableHighAccuracy: true, timeout: 20000 }
     )
   );
@@ -220,7 +269,7 @@ $("#use-here").onclick = () => plan(here);
 $("#search-form").onsubmit = (e) => {
   e.preventDefault();
   const q = $("#search").value.trim();
-  if (!q) return;
+  if (!q) return $("#search").focus();
   plan(async () => {
     const { lat, lon, label } = await geocode(q);
     return { point: { lat, lon }, area: label };
@@ -234,12 +283,14 @@ $("#skip").onclick = () => walk?.skip();
 $("#end").onclick = endWalk;
 
 for (const [value, { label }] of Object.entries(NARRATORS)) $("#narrator").append(el("option", { value, text: label }));
-$("#narrator").value = localStorage.getItem("earshot:narrator") || "gemma2";
+const savedNarrator = localStorage.getItem("earshot:narrator");
+$("#narrator").value = NARRATORS[savedNarrator] ? savedNarrator : "full";
 $("#narrator").onchange = () => localStorage.setItem("earshot:narrator", $("#narrator").value);
 
 webgpuStatus().then((s) => {
   if (!s.ok) {
-    $("#gpu-note").textContent = `${s.reason} Earshot will still work, reading plain facts instead of Gemma's narration.`;
+    $("#gpu-note").textContent =
+      "Heads up: this browser can't run Wren's storytelling, so you'll hear short facts instead. For the full experience, use Chrome on an Android phone or on a computer.";
     $("#gpu-note").hidden = false;
   }
 });

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Wren">
+  <circle cx="32" cy="32" r="32" fill="#b8e07a"/>
+  <path d="M20 37 L11 19 Q14 16 17 18 L26 32 Z" fill="#1d2e17"/>
+  <ellipse cx="31" cy="38" rx="14" ry="10.5" fill="#1d2e17"/>
+  <circle cx="41" cy="28" r="7.5" fill="#1d2e17"/>
+  <path d="M47.5 26.5 L55 28.5 L47.5 30.5 Z" fill="#1d2e17"/>
+  <circle cx="43" cy="26.5" r="1.6" fill="#b8e07a"/>
+  <path d="M24 37 Q31 42 38 36" stroke="#b8e07a" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".55"/>
+  <path d="M28 48 L27 53 M34 48 L35 53" stroke="#1d2e17" stroke-width="2" stroke-linecap="round"/>
+</svg>

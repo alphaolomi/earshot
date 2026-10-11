@@ -2,7 +2,7 @@
 
 **A walking guide that lives in your pocket.**
 
-Plan a walk while you have Wi-Fi. Earshot finds the interesting corners around you on OpenStreetMap and Wikipedia, and **Gemma, running entirely on your own device**, writes a short spoken piece about each one. Then the phone goes in your pocket. When GPS says you've reached a place, Earshot speaks up in your earbuds. In the quiet stretches between places it nudges you to notice things: a sound, a colour, the sky.
+Plan a walk while you have Wi-Fi. Earshot finds the interesting corners around you on OpenStreetMap and Wikipedia, and **Wren**, your pocket guide, writes a short spoken piece about each one. Wren is Google's open-weight **Gemma** model, running entirely on your own device. Then the phone goes in your pocket. When GPS says you've reached a place, Earshot speaks up in your earbuds. In the quiet stretches between places it nudges you to notice things: a sound, a colour, the sky.
 
 The screen is the shortest part of the walk.
 
@@ -22,6 +22,7 @@ The screen is the shortest part of the walk.
                      "walk pack" saved in localStorage ──► works with no signal
 ```
 
+- **Wren, the persona:** the app never shows model names. People meet Wren, a friendly companion who introduces itself, narrates each stop, and nudges you to notice things between stops. Settings offer "Full" or "Light" storytelling instead of model IDs.
 - **Models (swappable):** [Gemma 2 2B Instruct](https://huggingface.co/mlc-ai/gemma-2-2b-it-q4f16_1-MLC) by default, or [Gemma 3 1B Instruct](https://huggingface.co/mlc-ai/gemma3-1b-it-q4f16_1-MLC) as a lite option, both via [WebLLM](https://github.com/mlc-ai/web-llm) on WebGPU. f32 builds are used on GPUs without `shader-f16`. With no WebGPU at all, Earshot reads the facts plainly.
 - **Grounding:** Gemma is asked to *rewrite* the OSM tags and Wikipedia intro, not to recall anything. Any number it says (years, heights) must appear in the source text. Otherwise it retries at low temperature, then falls back to the plain facts. Places with no facts get a "tell them what to look at" prompt instead. Every narration ends with a small physical action: look, touch, listen.
 - **Short prompts on purpose:** Gemma 3 1B attends over a 512-token sliding window. Long prompts with rules and worked examples made it invent things ("the museum of the Great Pyramid"). Short "rewrite these facts" prompts fixed it.
@@ -39,7 +40,7 @@ npm run dev
 
 Open http://localhost:5173 in Chrome or Edge (desktop), or Chrome on Android 12+. Geolocation and WebGPU need `localhost` or HTTPS.
 
-**No time to go outside?** After planning, tap **Simulate the walk here**. It fast-forwards a stroll past every place so you can hear the whole thing at your desk.
+**No time to go outside?** After planning, tap **Preview it from here**. It fast-forwards a stroll past every place so you can hear the whole thing at your desk.
 
 ## Build
 
