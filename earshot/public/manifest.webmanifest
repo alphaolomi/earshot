@@ -1,0 +1,11 @@
+{
+  "name": "Earshot",
+  "short_name": "Earshot",
+  "description": "A walking guide that lives in your pocket.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1a14",
+  "theme_color": "#0f1a14",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

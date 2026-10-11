@@ -8,12 +8,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "brand": "node scripts/build-brand.mjs"
   },
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.85"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "vite": "^8.3.4"
   }
 }

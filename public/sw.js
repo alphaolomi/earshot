@@ -1,9 +1,9 @@
 // Offline shell: the app's own files are cached as they're fetched, so a saved walk
 // opens with no signal. (Gemma's weights are cached separately by WebLLM.)
-const CACHE = "earshot-v2";
+const CACHE = "earshot-v3";
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "./index.html", "./icon.svg", "./wren.svg", "./manifest.webmanifest"])));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "./index.html", "./icon.svg", "./wren.svg", "./icon-192.png", "./manifest.webmanifest"])));
   self.skipWaiting();
 });
 

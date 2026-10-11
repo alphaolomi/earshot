@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Earshot</title>
+  <rect width="512" height="512" fill="#0f1a14"/>
+  <g transform="translate(256 256) scale(0.8) translate(-256 -256)">
+  <g transform="translate(15.5 42.5) scale(6.5)">
+    <g fill="#b8e07a">
+      <path d="M20 37 L11 19 Q14 16 17 18 L26 32 Z"/>
+      <ellipse cx="31" cy="38" rx="14" ry="10.5"/>
+      <circle cx="41" cy="28" r="7.5"/>
+      <path d="M47.5 26.5 L55 28.5 L47.5 30.5 Z"/>
+    </g>
+    <circle cx="43" cy="26.5" r="1.6" fill="#0f1a14"/>
+    <path d="M24 37 Q31 42 38 36" stroke="#0f1a14" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".5"/>
+    <path d="M28 48 L27 53 M34 48 L35 53" stroke="#b8e07a" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <g stroke="#b8e07a" stroke-width="18" stroke-linecap="round" fill="none">
+    <path d="M407.5 199 A45 45 0 0 1 407.5 257"/>
+    <path d="M434.3 176.6 A80 80 0 0 1 434.3 279.4" opacity=".6"/>
+  </g>
+  </g>
+</svg>

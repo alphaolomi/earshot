@@ -1,5 +1,9 @@
 # Earshot
 
+[![Earshot: put your phone away, Wren will tell you what you're walking past](public/og-image.png)](https://alphaolomi.github.io/earshot/)
+
+**Try it:** https://alphaolomi.github.io/earshot/ · Chrome or Edge on a computer, or Chrome on Android
+
 **A walking guide that lives in your pocket.**
 
 Plan a walk while you have Wi-Fi. Earshot finds the interesting corners around you on OpenStreetMap and Wikipedia, and **Wren**, your pocket guide, writes a short spoken piece about each one. Wren is Google's open-weight **Gemma** model, running entirely on your own device. Then the phone goes in your pocket. When GPS says you've reached a place, Earshot speaks up in your earbuds. In the quiet stretches between places it nudges you to notice things: a sound, a colour, the sky.
@@ -58,6 +62,7 @@ Open http://localhost:5173 in Chrome or Edge (desktop), or Chrome on Android 12+
 
 ```bash
 npm run build   # static site in dist/, deployable anywhere (GitHub Pages, Render, ...)
+npm run brand   # re-render icons and the social image from brand/*.svg
 ```
 
 ## Credits

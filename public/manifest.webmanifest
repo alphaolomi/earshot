@@ -1,11 +1,20 @@
 {
-  "name": "Earshot",
+  "id": "./",
+  "name": "Earshot: walking guide",
   "short_name": "Earshot",
-  "description": "A walking guide that lives in your pocket.",
+  "description": "Put your phone away. Wren will tell you what you're walking past. Free, private and works with no signal.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0f1a14",
   "theme_color": "#0f1a14",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "lang": "en",
+  "categories": ["travel", "lifestyle", "health", "education"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
 }
